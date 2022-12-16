@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#!/bin/bash
+
+# no ejecutar desde local!!! (a menos que estemos trabajando en el propio script)
+
+actual_date=$(date +%F)
+actual_time=$(date +%F-%T)
+slack_webhook=
+
+# importante, sincronizar con el origen remoto para validar que $LOCAL != $REMOTE o $LOCAL = $REMOTE
+git remote update >&/dev/null
+
+# actualizamos etiquetas para sincronizarlas con las locales
+git fetch --tags --all >&/dev/null
+
+UPSTREAM=${1:-'@{u}'}
+LOCAL=$(git rev-parse @)
+REMOTE=$(git rev-parse "$UPSTREAM")
+BASE=$(git merge-base @ "$UPSTREAM")
+
+if [ $LOCAL = $REMOTE ]; then
+
+  echo "No changes detected" >&/dev/null
+  # echo "${actual_time}: no se han registrado cambios" >> "./logs/${actual_date}_remote_changes.log"
+  # curl -X POST -H 'Content-type: application/json' --data '{"text":"no se han registrado cambios"}' $slack_webhook >&/dev/null
+
+elif [ $LOCAL = $BASE ]; then
+
+  # echo "Need to pull"
+  echo "${actual_time}: se detectan cambios en repositorio remoto" >> "./logs/${actual_date}_remote_changes.log"
+
+  # descargamos los cambios
+  git pull >&/dev/null
+
+  # obtenemos la última etiqueta creada
+  last_tag=$(git tag | sort -r | head -n 1)
+
+  # creamos una nueva etiqueta a partir de la obtenida
+  new_tag=$(echo $last_tag | awk -F. -v OFS=. 'NF==1{print ++$NF}; NF>1{if(length($NF+1)>length($NF))$(NF-1)++; $NF=sprintf("%0*d", length($NF), ($NF+1)%(10^length($NF))); print}')
+
+  # publicamos la nueva versión (publicamos sólo la creada por si hay antiguas creadas en local)
+  git tag $new_tag && git push origin refs/tags/$new_tag
+
+  curl -X POST -H 'Content-type: application/json' --data '{"text":" Se despliega una nueva versión"}' $slack_webhook >&/dev/null
+
+elif [ $REMOTE = $BASE ]; then
+
+  # echo "Need to push"
+  echo "${actual_time}: alguien ha realizado cambios en el servidor en producción" >> "./logs/${actual_date}_remote_changes.log"
+  curl -X POST -H 'Content-type: application/json' --data '{"text":" Atención: alguien ha subido cambios directamente al servidor"}' $slack_webhook >&/dev/null
+
+else
+  echo "${actual_time}: \n Diverged" >> "./logs/${actual_date}_remote_changes.log"
+fi
