@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# replace with your slack webhook
+slack_webhook=
+
+DIR=$1
+app_name=
+
+# comprobar que se le pasa el argumento con la ruta del proyecto web de indaga-analytics
+if [[ $1 == "" ]]; then
+   echo "No se ha indicado el directorio del proyecto para aplicar el autocommit: `date +%F-%T`"
+   exit;
+fi
+
+# comprobar que existe el directorio de analytics
+if [[ ! -d $DIR ]]; then
+  ./func/slack_pull $slack_webhook $app_name
+else
+  # acceder al directorio de analytics
+  cd $DIR || exit 1
+  # se hace un git pull para mantener el proyecto sincronizado
+  git pull && ./func/slack_pull $slack_webhook $app_name
+fi
