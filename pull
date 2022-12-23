@@ -3,8 +3,8 @@
 # replace with your slack webhook
 slack_webhook=
 
-DIR=$1
-app_name=
+app_directory=$1
+app_name=$2
 
 # comprobar que se le pasa el argumento con la ruta del proyecto web de indaga-analytics
 if [[ $1 == "" ]]; then
@@ -13,11 +13,11 @@ if [[ $1 == "" ]]; then
 fi
 
 # comprobar que existe el directorio de analytics
-if [[ ! -d $DIR ]]; then
+if [[ ! -d $app_directory ]]; then
   ./func/slack_pull $slack_webhook $app_name
 else
   # acceder al directorio de analytics
-  cd $DIR || exit 1
+  cd $app_directory || exit 1
   # se hace un git pull para mantener el proyecto sincronizado
   git pull && ./func/slack_pull $slack_webhook $app_name
 fi
