@@ -1,0 +1,16 @@
+#!/bin/bash
+
+APP_SLACK_WEBHOOK=$1
+app_deployed=$2
+app_version=$3
+deploy_date_day=$(date +%F)
+deploy_date_time=$(date +%T)
+
+curl --silent --data-urlencode \
+    "$(printf 'payload={"text": "%s deploy %s version on %s at %s" }' \
+        "${app_deployed}" \
+        "${app_version}" \
+        "${deploy_date_day}" \
+        "${deploy_date_time}" \
+    )" \
+    ${APP_SLACK_WEBHOOK} || true

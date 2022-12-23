@@ -1,17 +1,21 @@
 #!/bin/bash
 
-#!/bin/bash
+# script que etiqueta de forma automática los cambios que encuentra en el repositorio remoto...
+# es un cutre-sistema de integración y despliegue continuo... pero válido para según que casos
 
-# no ejecutar desde local!!! (a menos que estemos trabajando en el propio script)
+# no me ejecutes desde local :) (a menos que estemos trabajando en el propio script, ya que detectas tus propios cambios porque remote <> local)
 
-actual_date=$(date +%F)
-actual_time=$(date +%F-%T)
+# add your webhook url
 slack_webhook=
 
-# importante, sincronizar con el origen remoto para validar que $LOCAL != $REMOTE o $LOCAL = $REMOTE
+app_name=$1
+actual_date=$(date +%F)
+actual_time=$(date +%F-%T)
+
+# important, synchronize local with remote previously because $LOCAL != $REMOTE o $LOCAL = $REMOTE
 git remote update >&/dev/null
 
-# actualizamos etiquetas para sincronizarlas con las locales
+# force update tags
 git fetch --tags --all >&/dev/null
 
 UPSTREAM=${1:-'@{u}'}
@@ -20,15 +24,11 @@ REMOTE=$(git rev-parse "$UPSTREAM")
 BASE=$(git merge-base @ "$UPSTREAM")
 
 if [ $LOCAL = $REMOTE ]; then
-
+  # its ok status: no need advice
   echo "No changes detected" >&/dev/null
-  # echo "${actual_time}: no se han registrado cambios" >> "./logs/${actual_date}_remote_changes.log"
-  # curl -X POST -H 'Content-type: application/json' --data '{"text":"no se han registrado cambios"}' $slack_webhook >&/dev/null
 
 elif [ $LOCAL = $BASE ]; then
-
-  # echo "Need to pull"
-  echo "${actual_time}: se detectan cambios en repositorio remoto" >> "./logs/${actual_date}_remote_changes.log"
+  # Need to pull: for me its a best moment to tag
 
   # descargamos los cambios
   git pull >&/dev/null
@@ -42,14 +42,18 @@ elif [ $LOCAL = $BASE ]; then
   # publicamos la nueva versión (publicamos sólo la creada por si hay antiguas creadas en local)
   git tag $new_tag && git push origin refs/tags/$new_tag
 
-  curl -X POST -H 'Content-type: application/json' --data '{"text":" Se despliega una nueva versión"}' $slack_webhook >&/dev/null
+  # send slack message
+  ./func/slack_deploy $slack_webhook $1 $new_tag
 
 elif [ $REMOTE = $BASE ]; then
 
-  # echo "Need to push"
-  echo "${actual_time}: alguien ha realizado cambios en el servidor en producción" >> "./logs/${actual_date}_remote_changes.log"
-  curl -X POST -H 'Content-type: application/json' --data '{"text":" Atención: alguien ha subido cambios directamente al servidor"}' $slack_webhook >&/dev/null
+  # Need to push: for me its an error... but for you, anyone knows
+  echo "${actual_time}: alguien ha realizado cambios en el servidor en producción" >&/dev/null
+
+  # send slack message
+  ./func/slack_deploy $slack_webhook $1 $new_tag
 
 else
-  echo "${actual_time}: \n Diverged" >> "./logs/${actual_date}_remote_changes.log"
+  # its ok status
+  echo "${actual_time}: \n Diverged" >&/dev/null
 fi
