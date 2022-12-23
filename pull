@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 # replace with your slack webhook
 slack_webhook=
 
@@ -14,10 +16,10 @@ fi
 
 # comprobar que existe el directorio de analytics
 if [[ ! -d $app_directory ]]; then
-  ./func/slack_pull $slack_webhook $app_name
+  $SCRIPT_DIR/func/slack_pull $slack_webhook $app_name
 else
   # acceder al directorio de analytics
   cd $app_directory || exit 1
   # se hace un git pull para mantener el proyecto sincronizado
-  git pull && ./func/slack_pull $slack_webhook $app_name
+  git pull && $SCRIPT_DIR/func/slack_pull $slack_webhook $app_name /dev/null 2>&1
 fi
