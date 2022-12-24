@@ -9,70 +9,78 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # verify arguments
 if [[ $2 == "" ]]; then
-   echo "Bad arguments for script execution ${deploy}"
-   exit;
+   echo "Bad arguments for script execution ${deploy}" && exit;
 fi
+
+# load functions
+source $SCRIPT_DIR/func/slack/message
 
 # comprobar que se le pasa el argumento con el directorio
 app_directory=$1
 app_name=$2
+webhook_url=$3
 
 if [[ ! -d $app_directory ]]; then
   # directory doesn't exist
-  echo -e "${app_directory} is not a valid directory"
-else
-  # access to project directory
-  cd $app_directory
+  echo "${app_directory} is not a valid directory" && exit
 fi
-
-# add your webhook url
-slack_webhook=$(printenv SLACK_WEBHOOK_URL_DEPLOY)
 
 # register time
 actual_date=$(date +%F)
 actual_time=$(date +%F-%T)
 
-# important, synchronize local with remote previously because $LOCAL != $REMOTE o $LOCAL = $REMOTE
-git remote update >&/dev/null
+# important, synchronize local with remote previously because $LOCAL != $REMOTE or $LOCAL = $REMOTE
+git -C "${app_directory}" remote update >&/dev/null
 
 # force update tags
-git fetch --tags --all >&/dev/null
+git -C "${app_directory}" fetch --tags --all >&/dev/null
 
-UPSTREAM=${1:-'@{u}'}
-LOCAL=$(git rev-parse @)
-REMOTE=$(git rev-parse "$UPSTREAM")
-BASE=$(git merge-base @ "$UPSTREAM")
+# UPSTREAM=${1:-'@{u}'}
+UPSTREAM='@{u}'
+LOCAL=$(git -C "${app_directory}" rev-parse @)
+REMOTE=$(git -C "${app_directory}" rev-parse "$UPSTREAM")
+BASE=$(git -C "${app_directory}" merge-base @ "$UPSTREAM")
 
 if [ $LOCAL = $REMOTE ]; then
   # its ok status: no need advice
-  echo "No changes detected" >&/dev/null
+  echo "No changes detected on the repository"
+
+  # send slack message
+  slack $webhook_url "No changes detected on $app_name on %actual_time"
+
 elif [ $LOCAL = $BASE ]; then
   # Need to pull: for me its a best moment to tag
 
   # descargamos los cambios
-  git pull >&/dev/null
+  git -C "${app_directory}" pull >&/dev/null
 
   # obtenemos la última etiqueta creada
-  last_tag=$(git tag | sort -r | head -n 1)
+  last_tag=$(git -C "${app_directory}" tag | sort -r | head -n 1)
+
+  # eliminamos argumentos previos al tag para poder saber con certeza a que tag nos referimos
+  last_tag=$(echo $last_tag | sed "s/v//g")
 
   # creamos una nueva etiqueta a partir de la obtenida
   new_tag=$(echo $last_tag | awk -F. -v OFS=. 'NF==1{print ++$NF}; NF>1{if(length($NF+1)>length($NF))$(NF-1)++; $NF=sprintf("%0*d", length($NF), ($NF+1)%(10^length($NF))); print}')
 
   # publicamos la nueva versión (publicamos sólo la creada por si hay antiguas creadas en local)
-  git tag $new_tag && git push origin refs/tags/$new_tag
+  git -C "${app_directory}" tag $new_tag && \
+        git -C "${app_directory}" push origin refs/tags/$new_tag
 
   # send slack message
-  $SCRIPT_DIR/func/slack_deploy $slack_webhook $1 $new_tag
+  slack $webhook_url "Se ha desplegado la versión $new_tag de $app_name"
 
 elif [ $REMOTE = $BASE ]; then
 
-  # Need to push: for me its an error... but for you, anyone knows
-  echo "${actual_time}: alguien ha realizado cambios en el servidor en producción" >&/dev/null
+  # Need to push: for me its an error... for you, anyone knows
+  echo "${actual_time}: se han detectado cambios en el servidor en producción..."
+
+  # git -C $app_directory clean -df
 
   # send slack message
-  $SCRIPT_DIR/func/slack_deploy $slack_webhook $1 $new_tag
+  slack $webhook_url "Se han detectado cambios en el servidor en producción y fueron eliminados... aquí no se hacen cambios"
 
 else
   # its ok status
-  echo "${actual_time}: \n Diverged" >&/dev/null
+  echo "${actual_time}: Diverged"
 fi

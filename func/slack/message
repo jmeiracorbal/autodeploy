@@ -1,0 +1,12 @@
+#!/bin/bash
+
+function slack {
+ slack_webhook=$1
+ slack_message=$2
+
+ curl --silent --data-urlencode \
+   "$(printf 'payload={"text": "%s", "link_names": "true" }' \
+       "${slack_message}" \
+   )" \
+   ${slack_webhook} >> /dev/null 2>&1
+}

@@ -1,9 +1,0 @@
-#!/bin/bash
-
-if [[ $1 == "" ]]; then
-   echo "Bad arguments for script execution ${env}"
-   exit;
-fi
-
-export -n SLACK_WEBHOOK_URL_DEPLOY=$1 && \
-	echo $SLACK_WEBHOOK_URL_DEPLOY
