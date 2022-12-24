@@ -35,6 +35,7 @@ git -C "${app_directory}" remote update >&/dev/null
 # force update tags
 git -C "${app_directory}" fetch --tags --all >&/dev/null
 
+# The line UPSTREAM=${1:-'@{u}'} allows you optionally to pass an upstream branch explicitly, in case you want to check against a different remote branch than the one configured for the current branch
 # UPSTREAM=${1:-'@{u}'}
 UPSTREAM='@{u}'
 LOCAL=$(git -C "${app_directory}" rev-parse @)

@@ -20,3 +20,4 @@ Important:
 * [How to increment version number in a shell script?](https://stackoverflow.com/a/8653732)
 * [Delete tags on local and remote to synchronize](https://stackoverflow.com/questions/5480258/how-can-i-delete-a-remote-tag)
 * [How to only push a specific tag to remote?](https://stackoverflow.com/questions/23212452/how-to-only-push-a-specific-tag-to-remote)
+* [Steps to compile Bash script into binary](https://www.simplified.guide/bash/compile-script)
