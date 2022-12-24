@@ -46,7 +46,7 @@ if [ $LOCAL = $REMOTE ]; then
   echo "No changes detected on the repository"
 
   # send slack message
-  slack $webhook_url "No changes detected on $app_name on %actual_time"
+  # slack $webhook_url "No changes detected on $app_name on $actual_time"
 
 elif [ $LOCAL = $BASE ]; then
   # Need to pull: for me its a best moment to tag
@@ -78,7 +78,7 @@ elif [ $REMOTE = $BASE ]; then
   # git -C $app_directory clean -df
 
   # send slack message
-  slack $webhook_url "Se han detectado cambios en el servidor en producción y fueron eliminados... aquí no se hacen cambios"
+  # slack $webhook_url "Se han detectado cambios en el servidor en producción y fueron eliminados... aquí no se hacen cambios"
 
 else
   # its ok status
